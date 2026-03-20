@@ -1,0 +1,908 @@
+{source}
+<?php
+/**
+ * Powerball Results & Analysis (Arkansas)
+ * Joomla 5.1.x + PHP 8.1, Sourcerer [[ ]] templating
+ * Notes:
+ * - Uses Factory::getDbo() consistently
+ * - Keeps raw SQL with #__ so Joomla replaces prefix
+ */
+
+/** GET VARIABLES FROM URL **/
+$stateName  = 'Arkansas';
+$stateAbrev = 'ar';
+$gName      = 'Powerball';
+$gName2     = 'Powerball Double Play';
+$stLink     = \Joomla\CMS\Factory::getApplication()->input->getString('stn', 'ar');
+
+/** GENERATE DB QUERY FROM THE URL VARIABLES **/
+$dbCol = '#__lotterydb_ar';
+
+/** SEO: set page title and meta description **/
+$doc = \Joomla\CMS\Factory::getDocument();
+$doc->setTitle('Powerball Results, Stats & AI Tools | LottoExpert');
+$doc->setDescription(
+    'See today\'s Powerball results plus number frequencies, skip analysis, quick picks, odds and tax tools, with AI-powered prediction links from SKAI on LottoExpert.net.'
+);
+?>
+
+[[style type="text/css"]]
+img.lotteryLogo {max-height: 100px;margin: 0px auto;}
+.latestDraw {overflow: hidden;width: 100%;max-width: 800px;margin: 0px auto 50px;border-bottom: 5px solid #000;border-right: 1px solid #ddd;border-left: 1px solid #ddd;border-radius: 10px;}
+.result-wrapper {width: 99%;padding: 5px;box-sizing: content-box;background:#fff;transition: all 0.3s ease;}
+.result-wrapper:hover{background:#fff;transition:all 0.3s ease;}
+.fsd-date {width: 100%;text-align: center;margin-bottom: 10px;}
+.fsd-dresults {display: block;width: 100%;text-align: center;color: #191094;font-weight: 500;font-size: 18px;background: #fded24;margin-bottom: 15px;border: 1px solid #191094;line-height: 1.2;padding-top: 15px;padding-bottom: 15px;}
+.fsd-dresults strong {font-size: 22px;font-weight: 800;letter-spacing: 2px;}
+span.pball {color: #dc2b13;}
+span.pplay {color: #1a1199;font-weight: 700;}
+h2.latestHeading{background:#261d8b;color: #fff;padding: 20px;font-size: 24px;text-align: center;margin-bottom: 0px;}
+.fsd-nJackpot {text-align: center;font-size: 21px;font-weight: 700;}
+.fsd-nJackpot span {font-size: 32px;color: #191094;}
+p.lstResult {text-align: center;}
+p.acsoon {background: black;color: #fff;padding: 5px;text-align: center;margin-bottom: 0px;}
+.drawHistory {text-align: center; padding: 15px;border: 1px solid #160e83;margin-top: 35px;background: #f6f6f6;border-radius: 10px;border-top: 7px solid #160e83;}
+.fsd-pb {width: 40px;display: inline-block;}
+
+/* Shared styles for both regular and Powerball */
+.fsd-circle,
+.fsd-pb-circle {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  margin: 0 2px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 32px;
+  font-weight: bold;
+  font-size: 16px;
+  color: #fff;
+  padding: 0;
+}
+/* Regular balls */
+.fsd-circle {background: radial-gradient(circle at 50% 20%, #2ea9ff, #0066ad 75%, #333 100%);}
+/* Powerball */
+.fsd-pb-circle {background: radial-gradient(circle at 50% 20%, #f97f92, #a3071e 75%, #333 100%);}
+/* Shadow for 3D effect under the balls */
+.fsd-circle::after,
+.fsd-pb-circle::after {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 32px;
+  height: 5px;
+  bottom: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(51, 51, 51, 0.75) 0%, rgba(51, 51, 51, 0) 75%);
+}
+
+.pbHistoryBtn:hover {background-color: #0d0b74;}
+.pbHistory {display: flex; justify-content: center; margin-bottom: 10px;}
+.pbHistoryBtn {
+  display: block; padding: 10px 20px; font-size: 12px; font-weight: bold; color: white;
+  background-color: #1a1199; text-align: center; border-radius: 5px; text-decoration: none; margin: 10px;
+  width: 250px; transition: background 0.3s ease;
+}
+/* Shadow Button Styling */
+.shadow-button {
+  text-decoration: none; color: #fff; font-size: 16px; display: inline-block; padding: 10px 20px;
+  background-color: #3c3686; border-radius: 5px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.shadow-button:hover {box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); transform: translateY(-3px);}
+.flash-red {animation: flashRed 1s infinite;}
+@keyframes flashRed {0%, 100% {color: inherit;} 50% {color: red;}}
+
+/* Subheading under main title (Powerball Results & Analysis) */
+.subheading {
+  max-width: 800px;
+  margin: 10px auto 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #222;
+}
+
+/* One-line intro above AI/statistical tools */
+.tool-intro {
+  max-width: 800px;
+  margin: 25px auto 10px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+}
+
+@media only screen and (min-width:320px) and (max-width:800px){
+  .result-wrapper,.fsd-date{width:100%}
+  h2.lotteryHeading {color: #fff;font-size: 18px;}
+  img.lottoMan {max-width: 32px;}
+  .drawHistory {padding: 5px;max-width: 97%;font-size: 14px;}
+  .subheading,
+  .tool-intro {
+    max-width: 95%;
+    font-size: 14px;
+  }
+}
+[[/style]]
+
+[[div class="latestDraw"]]
+[[h2 class="latestHeading"]]Powerball Results & Analysis:[[br/]][[/h2]]
+[[p class="subheading"]]Powerball number frequencies, hot & cold stats, and overdue numbers updated after every draw.[[/p]]
+<?php
+
+    $db = \Joomla\CMS\Factory::getDbo();
+    $sql = "SELECT * FROM `$dbCol` WHERE `game_id` = '101' ORDER BY `draw_date` DESC LIMIT 1";
+    $db->setQuery($sql);
+    $latestResult = $db->loadObjectList();
+
+    if (!empty($latestResult)) {
+        foreach ($latestResult as $lr) {
+            $gId           = $lr->game_id;
+            $draw_date     = $lr->draw_date;
+            $draw_results  = $lr->draw_results;
+            $next_draw_date= $lr->next_draw_date;
+            $next_jackpot  = $lr->next_jackpot;
+           /** NUMBER POSITIONS **/
+            $p1 = $lr->first;
+            $p2 = $lr->second;
+            $p3 = $lr->third;
+            $p4 = $lr->fourth;
+            $p5 = $lr->fifth;
+            $pb = $lr->sixth;
+
+            echo '[[div class="result-wrapper"]]';
+            echo '[[img src="/images/lottodb/us/' . strtolower($stateAbrev) . '/' . str_replace(" ", "-", strtolower($gName)) . '.png" class="lotteryLogo" alt="' . $stateName . ' ' . $gName . '"]]';
+            echo '[[div class="fsd-date"]]Powerball Results[[br/]][[strong]]' . date('m-d-Y', strtotime($draw_date)) . '[[/strong]][[/div]]';
+
+           /** POWERBALL RESULTS **/
+            echo '[[p class="lstResult"]][[br/]]'
+               . '[[span class="fsd-circle"]]' . $p1 . '[[/span]]'
+               . '[[span class="fsd-circle"]]' . $p2 . '[[/span]]'
+               . '[[span class="fsd-circle"]]' . $p3 . '[[/span]]'
+               . '[[span class="fsd-circle"]]' . $p4 . '[[/span]]'
+               . '[[span class="fsd-circle"]]' . $p5 . '[[/span]]&nbsp;&nbsp;'
+               . '[[span class="fsd-pb-circle"]]' . $pb . '[[/span]]'
+               . '[[br/]][[/p]]';
+
+            echo '[[div class="fsd-date"]]Next drawing date:[[br/]][[strong]]' . date('m-d-Y', strtotime($next_draw_date)) . '[[/strong]][[/div]]';
+
+            if ($next_jackpot !== '' && (float) $next_jackpot > 0 && strtolower((string) $next_jackpot) !== 'n/a') {
+                echo '[[div class="fsd-nJackpot"]]Next Jackpot[[br/]][[span]]$' . number_format((float) $next_jackpot, 0, '.', ',') . '[[/span]][[/div]]';
+            }
+
+           /** POWERBALL DOUBLE PLAY RESULTS **/
+            $db = \Joomla\CMS\Factory::getDbo();
+            $sql = "SELECT * FROM `$dbCol` WHERE `game_id` = '101D' ORDER BY `draw_date` DESC LIMIT 1";
+            $db->setQuery($sql);
+            $latestResult2 = $db->loadObjectList();
+
+            if (!empty($latestResult2)) {
+                foreach ($latestResult2 as $lr) {
+                    $gId2           = $lr->game_id;
+                    $draw_date2     = $lr->draw_date;
+                    $draw_results2  = $lr->draw_results;
+                    $next_draw_date2= $lr->next_draw_date;
+                    $next_jackpot2  = $lr->next_jackpot;
+                   /** NUMBER POSITIONS **/
+                    $p12 = $lr->first;
+                    $p22 = $lr->second;
+                    $p32 = $lr->third;
+                    $p42 = $lr->fourth;
+                    $p52 = $lr->fifth;
+                    $pb2 = $lr->sixth;
+
+                    if ($gName2 === 'Powerball Double Play' || $gId2 === '101D') {
+                        echo '[[div class="fsd-date"]]Powerball Double Play[[br/]]'
+                           . '[[span class="fsd-circle"]]' . $p12 . '[[/span]]'
+                           . '[[span class="fsd-circle"]]' . $p22 . '[[/span]]'
+                           . '[[span class="fsd-circle"]]' . $p32 . '[[/span]]'
+                           . '[[span class="fsd-circle"]]' . $p42 . '[[/span]]'
+                           . '[[span class="fsd-circle"]]' . $p52 . '[[/span]]&nbsp;&nbsp;'
+                           . '[[span class="fsd-pb-circle"]]' . $pb2 . '[[/span]]'
+                           . '[[/div]]';
+                    }
+                }
+            }
+
+            // Intro text for analysis tools: clarify relationship between results, stats & tools
+            // Instant Intent Quick Picks button (CHG)
+echo '[[div class="pbHistory"]]
+  [[a class="pbHistoryBtn shadow-button" style="text-decoration: none; color: white;"
+      href="/powerball/quick-pick-today/?game_id=101&stn=' . urlencode($stLink) . '"]]
+    Quick Picks Today
+  [[/a]]
+[[/div]]';
+
+
+
+// SKAI Analysis button (CHG: added in same pbHistory pattern to avoid breaking layout)
+echo '[[div class="pbHistory"]]
+
+                [[a class="pbHistoryBtn shadow-button" style="text-decoration: none; color: white;" href="/picking-winning-numbers/artificial-intelligence/skai-lottery-prediction?gameId=101"]]
+        SKAI Analysis
+    [[/a]]
+            [[/div]]';
+
+echo '[[div class="pbHistory"]]
+                [[a class="pbHistoryBtn shadow-button" href="/picking-winning-numbers/artificial-intelligence/markov-chain-monte-carlo-mcmc-analysis?gameId=101"]]
+                   MCMC Markov Lottery Analysis
+                [[/a]]
+            [[/div]]';
+
+
+            echo '[[div class="pbHistory"]]
+                [[a class="pbHistoryBtn shadow-button" href="/picking-winning-numbers/artificial-intelligence/ai-powered-predictions?game_id=101"]]
+                    A.I. Lottery Analysis
+                [[/a]]
+            [[/div]]';
+
+            echo '[[div class="pbHistory"]]
+                [[a class="pbHistoryBtn shadow-button" href="/picking-winning-numbers/artificial-intelligence/skip-and-hit-analysis?game_id=101"]]
+                    Skip & Hit
+                [[/a]]
+            [[/div]]';
+
+            echo '[[div class="pbHistory"]]
+                [[a class="pbHistoryBtn shadow-button" href="/all-lottery-heatmaps?gameId=101"]]
+                    Heatmap Analysis
+                [[/a]]
+            [[/div]]';
+
+            echo '[[div class="pbHistory"]]
+                [[a class="pbHistoryBtn shadow-button" href="/lowest-drawn-number-analysis?gId=' . $gId . '&stateName=' . $stateName . '&gName=' . $gName . '&sTn=' . strtolower($stateAbrev) . '"]]
+                    Lowest Number Threshold Tool
+                [[/a]]
+            [[/div]]';
+
+            echo '[[div class="pbHistory"]]
+                [[a class="pbHistoryBtn shadow-button" href="/lottery-archives?gId=101&sTn=ar"]]
+                    POWERBALL ARCHIVES
+                [[/a]]
+            [[/div]]';
+
+           /** DRAW HISTORY **/
+            echo '[[div class="drawHistory"]][[h2]]Draw History[[/h2]][[p]]Statistics update automatically after each Powerball draw.[[/p]]';
+
+            $db = \Joomla\CMS\Factory::getDbo();
+
+
+            $sql = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE "
+                 . "(first = '$p1' OR second = '$p1' OR third = '$p1' OR fourth = '$p1' OR fifth = '$p1') "
+                 . "AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $lastDraw1B = $db->loadResult();
+
+            $sql = "SELECT COUNT(id) FROM #__lotterydb_ar WHERE draw_date > '$lastDraw1B' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $row1count = ((int) $db->loadResult()) + 1;
+            echo '[[strong]]' . $p1 . ':[[/strong]] last drawn on ' . date('m-d-Y', strtotime($lastDraw1B)) . ' [[strong]](' . $row1count . ' drawings ago)[[/strong]][[br/]]';
+
+            $sql = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE "
+                 . "(first = '$p2' OR second = '$p2' OR third = '$p2' OR fourth = '$p2' OR fifth = '$p2') "
+                 . "AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $lastDraw2B = $db->loadResult();
+
+            $sql = "SELECT COUNT(id) FROM #__lotterydb_ar WHERE draw_date > '$lastDraw2B' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $row2count = ((int) $db->loadResult()) + 1;
+            echo '[[strong]]' . $p2 . ':[[/strong]] last drawn on ' . date('m-d-Y', strtotime($lastDraw2B)) . ' [[strong]](' . $row2count . ' drawings ago)[[/strong]][[br/]]';
+
+            $sql = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE "
+                 . "(first = '$p3' OR second = '$p3' OR third = '$p3' OR fourth = '$p3' OR fifth = '$p3') "
+                 . "AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $lastDraw3B = $db->loadResult();
+
+            $sql = "SELECT COUNT(id) FROM #__lotterydb_ar WHERE draw_date > '$lastDraw3B' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $row3count = ((int) $db->loadResult()) + 1;
+            echo '[[strong]]' . $p3 . ':[[/strong]] last drawn on ' . date('m-d-Y', strtotime($lastDraw3B)) . ' [[strong]](' . $row3count . ' drawings ago)[[/strong]][[br/]]';
+
+            $sql = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE "
+                 . "(first = '$p4' OR second = '$p4' OR third = '$p4' OR fourth = '$p4' OR fifth = '$p4') "
+                 . "AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $lastDraw4B = $db->loadResult();
+
+            $sql = "SELECT COUNT(id) FROM #__lotterydb_ar WHERE draw_date > '$lastDraw4B' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $row4count = ((int) $db->loadResult()) + 1;
+            echo '[[strong]]' . $p4 . ':[[/strong]] last drawn on ' . date('m-d-Y', strtotime($lastDraw4B)) . ' [[strong]](' . $row4count . ' drawings ago)[[/strong]][[br/]]';
+
+            $sql = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE "
+                 . "(first = '$p5' OR second = '$p5' OR third = '$p5' OR fourth = '$p5' OR fifth = '$p5') "
+                 . "AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $lastDraw5B = $db->loadResult();
+
+            $sql = "SELECT COUNT(id) FROM #__lotterydb_ar WHERE draw_date > '$lastDraw5B' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $row5count = ((int) $db->loadResult()) + 1;
+            echo '[[strong]]' . $p5 . ':[[/strong]] last drawn on ' . date('m-d-Y', strtotime($lastDraw5B)) . ' [[strong]](' . $row5count . ' drawings ago)[[/strong]][[br/]]';
+
+            $sql = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE sixth = '$pb' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $lastDrawPBB = $db->loadResult();
+
+            $sql = "SELECT COUNT(id) FROM #__lotterydb_ar WHERE draw_date > '$lastDrawPBB' AND draw_date < '$draw_date' AND game_id = '101'";
+            $db->setQuery($sql);
+            $rowPBcount = ((int) $db->loadResult()) + 1;
+            echo '[[strong]]Powerball[[br/]](' . $pb . '):[[/strong]] last drawn on ' . date('m-d-Y', strtotime($lastDrawPBB)) . ' [[strong]](' . $rowPBcount . ' drawings ago)[[/strong]][[br/]]';
+
+            echo '[[div class="pbHistory"]][[a class="pbHistoryBtn" href="/powerball-winning-numbers?stn=' . $stLink . '"]]Draw History Archives[[/a]][[/div]]';
+            echo '[[br/]]';
+
+            echo '[[/div]]';// close .drawHistory
+            echo '[[/div]]';// close .result-wrapper
+        }/** EO foreach **/
+    }/** EO if !Empty **/
+?>
+[[/div]] <!-- .latestDraw -->
+{/source}
+<!-- =========================
+     Powerball Quick Links Card (Centered + Tight)
+     ========================= -->
+<style>
+  .le-card--quick-links{
+    max-width: 720px;            /* CHG: tighter width */
+    margin: 16px auto 22px;      /* CHG: centered */
+    padding: 14px 16px;          /* CHG: tighter padding */
+    border-radius: 14px;
+    background: #f6f8ff;
+    border: 1px solid rgba(28, 102, 255, 0.15);
+    box-shadow: 0 10px 24px rgba(10, 26, 51, 0.06);
+  }
+
+  .le-card--quick-links h3{
+    margin: 0 0 10px 0;          /* CHG: tighter */
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: center;          /* CHG: centered heading */
+    color: #0a1a33;
+  }
+
+  .le-card-links{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;               /* CHG: compact layout */
+    justify-content: center;     /* CHG: centered links */
+    gap: 12px;                   /* CHG: tight spacing */
+    flex-wrap: wrap;
+  }
+
+  .le-card-links li{
+    margin: 0;                   /* CHG: remove vertical looseness */
+  }
+
+  .le-card-links a{
+    display: inline-block;
+    padding: 8px 12px;           /* CHG: button-like compactness */
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(28, 102, 255, 0.18);
+    text-decoration: none;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .le-card-links a:hover{
+    text-decoration: underline;
+  }
+
+  /* Mobile: keep it tight */
+  @media (max-width: 520px){
+    .le-card--quick-links{
+      max-width: 92vw;
+      padding: 12px 12px;
+    }
+    .le-card-links{
+      gap: 10px;
+    }
+    .le-card-links a{
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+
+<div class="le-card le-card--quick-links">
+  <h3>Powerball Quick Picks &amp; Lucky Numbers</h3>
+
+  <ul class="le-card-links">
+    <li><a href="/powerball/quick-pick-today/">Quick Pick Numbers for Today</a></li>
+    <li><a href="/powerball/lucky-numbers-today/">Lucky Numbers for Today</a></li>
+  </ul>
+</div>
+<div style="margin-bottom: 10px; font-size: 13px; line-height: 1.4; text-align: center; max-width: 600px; margin: 0 auto; background-color: #f4faff; padding: 15px; border-radius: 8px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);">
+    <p style="font-weight: bold; font-size: 16px; color: #0073e6; margin-top: 0;">How to Use Frequency Table </p>
+    <p style="margin: 10px 0;">This table shows how often each number was drawn in the last  drawings. Sort columns to find patterns:</p>
+    <ul style="list-style-type: none; padding-left: 0; margin: 10px 0;">
+        <li><strong>Number:</strong> Focus on specific numbers.</li>
+        <li><strong>Drawn Times:</strong> See most/least drawn numbers.</li>
+        <li><strong>Last Drawn:</strong> Find recent or overdue numbers.</li>
+        <li><strong>Fav:</strong> Mark your favorites.</li>
+    </ul>
+    <p style="margin-bottom: 0;">Expand the table to analyze more drawings for deeper insights.</p>
+</div>
+{source 0}
+[[style type="text/css"]]
+h2.original-draw,h2.predicted-draw{background: #0269b1;color: #fff;padding: 10px;font-size: 20px;}
+table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after {content: "\25B4\25BE"}
+#table10,#table11{max-width:100%;width: 100%;}
+#table10 thead,#table11 thead{background: #fff;color: #261d8a !important;}
+#table10 tbody tr,#table11 tbody tr {background: rgba(0,0,0,0);}
+#table10 tbody tr:hover,#table11 tbody tr:hover {background: #b0e8b7;}
+#table10 td,#table10 th,#table11 td,#table11 td {text-align: center;padding:5px;}
+input[type="checkbox"] {transform: scale(1.7) !important;}
+#fq-fav-container {display: block;padding: 10px;border: 3px solid #000;background:rgb(255, 210, 0);}
+#fq-fav-container span {display: inline-block;margin: 0px 5px;font-size: 20px;font-weight: 700;position: relative;background: radial-gradient(circle at 50% 20%,#95c9fd,#036 75%,#333 100%);color: #fff;border-radius: 50%;padding: 3px 7px 7px 7px !important;width: 40px;height: 40px;text-align: center;border: 1px solid #fff;}
+#fq-fav-container span:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+#fq-fav-container strong {font-size: 20px;margin-right: 10px;}
+.roundedblue {position: relative;display: block;margin: 0px auto;background:radial-gradient(circle at 50% 20%,#2ea9ff,#0066ad 75%,#333 100%);color: #fff;border-radius: 50%;padding:3px 7px 5px 7px !important;width: 32px;height: 32px;}
+.roundedblue:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+.freqDrawStats {max-width: 1000px; margin: 0px auto;}
+
+
+
+[[/style]]
+
+
+[[div class="main-fq-wrap"]]
+[[div class="original-draw"]]
+[[h2 class="original-draw"]]Frequencies Past 100 Drawings[[/h2]]
+[[div class="searchbar-wrapper"]]
+
+  [[form name="fqsearch" method="POST" action="/powerball-winning-numbers-analysis-tools#table11"]]
+  [[div class="lottery-fields-date"]]
+  [[label]]Drawings to analyse: [[/label]] 
+  [[select name="nod" id="nod"]]';
+    <?php
+    $nodss = range(10,700,05);
+    foreach($nodss as $nods){
+        echo '[[option value="'.$nods.'"]]'.$nods.'[[/option]]';
+    }
+    ?>
+  [[/select]]
+  &nbsp;&nbsp;[[input name="fq-search" type="submit" value="ANALYZE" /]]
+  [[/div]]
+  [[/form]]
+[[/div]] <?php /** EO SEARCH BAR WRAP **/?>
+
+<?php /** ***************Begin new sortable Table**********#1a1199*****#0d4973**f2f2f2**** **/ ?>
+    [[table id="table10" class="sortable"]]
+    [[thead]]
+        [[tr]][[th]]Number[[/th]][[th]]Drawn Times[[/th]][[th]]Last Drawn[[/th]][[th]]Fav[[/th]][[/tr]]
+    [[/thead]]
+    [[tbody]]
+<?php /**  START THE TD LOOPS **/
+    $num_query = 1; /** Here we start with number 1 **/
+    $todaydate = date('Y-m-d');
+    
+    $db = JFactory::getDBO();
+    $latestdraw = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE game_id = '101'";
+    
+    while($num_query<=69){
+    	/** GET THE DRAWN TIMES WITHIN THE LAST 100 DRAWINGS **/
+        if($num_query < 10){
+            $num_query = str_pad($num_query, 2, "0", STR_PAD_LEFT);
+        }
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM (SELECT * FROM #__lotterydb_ar WHERE game_id = '101' ORDER BY `draw_date` DESC LIMIT 100) AS T WHERE (`first` = '$num_query' OR `second` = '$num_query' OR `third` = '$num_query' OR `fourth` = '$num_query' OR `fifth` = '$num_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $count_num = $db->loadResult();
+        
+        if($count_num > 1){
+            $fcount = $count_num.' X';
+        }else if($count_num <= 1){
+            $fcount = $count_num.' X';
+        }
+        
+        /** GET THE LAST DRAWN DATE **/
+        $db = JFactory::getDBO();
+        $sql = "SELECT MAX(`draw_date`) FROM (SELECT * FROM #__lotterydb_ar WHERE game_id = '101' ORDER BY `draw_date` DESC LIMIT 100) AS T WHERE (`first` = '$num_query' OR `second` = '$num_query' OR `third` = '$num_query' OR `fourth` = '$num_query' OR `fifth` = '$num_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $lastd = $db->loadResult();
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM #__lotterydb_ar WHERE (`draw_date` BETWEEN '$lastd' AND '$todaydate') AND game_id = '101'";
+        $db->setQuery($sql);
+        $db->execute();
+        $lastdraw = $db->loadResult();
+        
+        if($lastdraw == 1){
+            $lastdrawing = 'In last drw';
+        }else if($lastdraw > 1 && $lastdraw <= 100){
+            $lastdrawing = $lastdraw.' drws ago';
+        }else if($lastdraw < 1 || $lastdraw > 100){
+            $lastdrawing = 'Not in last 100 drws';
+        }
+       
+        
+        echo '[[tr]][[td class="roundedblue"]]'.$num_query.'[[/td]][[td sorttable_customkey="'.$count_num.'"]]'.$fcount.'[[/td]][[td sorttable_customkey="'.$lastdraw.'"]]'.$lastdrawing.'[[/td]][[td]][[input type="checkbox" id="input'.$num_query.'" name="favonum[]" value="'.$num_query.'"]][[/td]][[/tr]]';
+        $num_query++;
+    }
+?>
+    [[/tbody]]
+    [[/table]]
+[[/div]] <?php /** EO ORIGINAL DRAW **/?>
+
+[[div class="predicted-draw"]]
+<?php if(isset($_POST['fq-search'])){ /** USER SPECIFYING DATE RANGE **/
+    $nod = $_POST['nod'];
+    if(!empty($_POST['fromdate'])){
+        $fromdate = $_POST['fromdate'];
+        $fromdate = date('Y-m-d',strtotime($fromdate));
+    }else{
+        $db = JFactory::getDBO();
+        $sql = "SELECT MIN(draw_date) FROM #__lotterydb_ar WHERE game_id = '101'";
+        $db->setQuery($sql);
+        $db->execute();
+        $fromdate = $db->loadResult();
+        $fromdate = date('Y-m-d',strtotime($fromdate));
+    }
+    if(!empty($_POST['todate'])){
+        $todate = $_POST['todate'];
+        $todate = date('Y-m-d',strtotime($todate));
+    }else{
+        $todate = date('Y-m-d');
+    }
+?>
+
+[[style type="text/css"]]
+.original-draw{display:none}
+// #table10 thead,#table11 thead{background: #fff;color: ##261d8a;}
+#table11 td {text-align: center;}
+#table10 tbody tr,#table11 tbody tr {background: rgba(0,0,0,0);}
+#table10 tbody tr:hover,#table11 tbody tr:hover {background: #b0e8b7;}
+h2.predicted-draw{background: #0269b1;color: #fff;padding: 10px;font-size: 20px;}
+input[type="checkbox"] {transform: scale(1.7) !important;}
+#fq-fav-container {display: block;padding: 10px;border: 3px solid #000;background:rgb(255, 210, 0);}
+#fq-fav-container span {display: inline-block;margin: 0px 5px;font-size: 20px;font-weight: 700;position: relative;background: radial-gradient(circle at 50% 20%,#95c9fd,#036 75%,#333 100%);color: #fff;border-radius: 50%;padding: 7px 7px 7px 7px !important;width: 40px;height: 40px;text-align: center;border: 1px solid #fff;}
+#fq-fav-container span:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+#fq-fav-container strong {font-size: 20px;margin-right: 10px;}
+.roundedblue {position: relative;display: block;margin: 0px auto;background:radial-gradient(circle at 50% 20%,#2ea9ff,#0066ad 75%,#333 100%);color: #fff;border-radius: 50%;padding:3px 7px 5px 7px !important;width: 32px;height: 32px;}
+.roundedblue:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+[[/style]]
+
+[[h2 class="predicted-draw"]]Number Drawn Frequencies for the last <?php echo $nod.' drawings';?>[[/h2]]
+[[div class="searchbar-wrapper"]]
+
+  [[form name="fqsearch" method="POST" action="/powerball-winning-numbers-analysis-tools#table11"]]
+  [[div class="lottery-fields-date"]]
+  [[label]]Number of drawings to analyse: [[/label]] 
+  [[select name="nod" id="nod"]]';
+    <?php
+    $nodss = range(5,200,5);
+    foreach($nodss as $nods){
+        echo '[[option value="'.$nods.'"]]'.$nods.'[[/option]]';
+    }
+    ?>
+  [[/select]][[br /]]
+  &nbsp;&nbsp;[[input name="fq-search" type="submit" value="ANALYZE" /]]
+  [[/div]]
+  [[/form]]
+[[/div]] <?php /** EO SEARCH BAR WRAP **/?>
+
+<?php /** ***************Begin new predicted sortable Table********************* **/ ?>
+    [[table id="table11" class="sortable"]]
+    [[thead]]
+        [[tr]][[th]]Number[[/th]][[th]]Drawn Times[[/th]][[th]]Last Drawn[[/th]][[th]]Fav[[/th]][[/tr]]
+    [[/thead]]
+    [[tbody]]
+<?php 
+    $number_query = 1; /** Here we start with number 1 **/
+    while($number_query<=69){
+    	/** GET THE DRAWN TIMES **/
+        if($number_query < 10){
+            $number_query = str_pad($number_query, 2, "0", STR_PAD_LEFT);
+        }
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM (SELECT * FROM #__lotterydb_ar WHERE game_id = '101' ORDER BY `draw_date` DESC LIMIT $nod) AS T WHERE (`first` = '$number_query' OR `second` = '$number_query' OR `third` = '$number_query' OR `fourth` = '$number_query' OR `fifth` = '$number_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $count_number = $db->loadResult();
+        
+        if($count_number > 1){
+            $fpcount = $count_number.' X';
+        }else if($count_number <= 1){
+            $fpcount = $count_number.' X';
+        }
+        
+        /** GET THE LAST DRAWN DATE **/
+        $db = JFactory::getDBO();
+        $sql = "SELECT MAX(`draw_date`) FROM (SELECT * FROM #__lotterydb_ar WHERE (`draw_date` BETWEEN '$fromdate' AND '$todate') AND game_id = '101' ORDER BY `draw_date` DESC LIMIT $nod) AS T WHERE (`first` = '$number_query' OR `second` = '$number_query' OR `third` = '$number_query' OR `fourth` = '$number_query' OR `fifth` = '$number_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $lastpd = $db->loadResult();
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM #__lotterydb_ar WHERE (`draw_date` BETWEEN '$lastpd' AND '$todate') AND game_id = '101'";
+        $db->setQuery($sql);
+        $db->execute();
+        $lastpdraw = $db->loadResult();
+        
+        
+        if($lastpdraw == 1){
+            $lastdprawing = 'In last drawing';
+        }else if($lastpdraw > 1 && $lastpdraw <= $nod){
+            $lastdprawing = $lastpdraw.' drws ago';
+        }else if($lastpdraw < 1 || $lastpdraw > $nod){
+            $lastdprawing = 'Not in last '.$nod.' drws';
+        }
+        
+        echo '[[tr]][[td class="roundedblue"]]'.$number_query.'[[/td]][[td sorttable_customkey="'.$count_number.'"]]'.$fpcount.'[[/td]][[td sorttable_customkey="'.$lastpdraw.'"]]'.$lastdprawing.'[[/td]][[td]][[input type="checkbox" id="input'.$number_query.'" name="favonum[]" value="'.$number_query.'"]][[/td]][[/tr]]';
+        $number_query++;
+    }
+?>
+    [[/tbody]]
+    [[/table]]
+<?php } /** EO PREDICTED IF ISSET **/ ?>
+[[/div]] <?php /** EO PREDICTED DRAW **/?>
+[[div id="fq-fav-container"]][[strong]]Favorites Selection: [[/strong]][[/div]]
+[[/div]] <?php /** EO MAIN FQ WRAP **/?>
+
+[[script type="text/javascript"]]
+jQuery(document).ready(function() {
+jQuery('input[name="favonum[]"]').change(function () {
+  var inputVal = jQuery(this).val() + ' ';
+  var className = inputVal.replace(/ /g, '_');
+
+  if (jQuery(this).prop('checked')) {  //which checkbox was checked
+    jQuery("#fq-fav-container").append('[[span class="span_' + className + '"]]' + inputVal + '[[/span]]');
+  } else {
+    jQuery('.span_'+className).remove();
+  }
+});
+ })
+[[/script]]
+{/source}
+
+{source 0}
+[[style type="text/css"]]
+h2.original-pdraw,h2.predicted-pdraw{background: #c10909;color: #fff;padding: 10px;font-size:20px}
+table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after {content: "\25B4\25BE"}
+// #table12 thead,#table13 thead{background: #c10909;color: #fff;}
+#table12 thead,#table13 thead{background: #fff;color: #0d4973;}
+#table12,#table13{max-width:100%;width:100%}
+#table12 tbody tr,#table13 tbody tr {background: rgba(0,0,0,0);}
+#table12 tbody tr:hover,#table13 tbody tr:hover {background: #b0e8b7;}
+#table12 td,#table12 th,#table13 td,#table13 th {text-align: center;padding:5px;}
+input[type="checkbox"] {transform: scale(1.7) !important;}
+#fqp-fav-container {display: block;padding: 10px;border: 3px solid #000;background:rgb(255, 210, 0);}
+#fqp-fav-container span {display: inline-block;margin: 0px 5px;font-size: 20px;font-weight: 700;position: relative;background:radial-gradient(circle at 50% 20%,#ffb1b1,#ee3030 75%,#333 100%);color: #fff;border-radius: 50%;padding: 7px 7px 7px 7px !important;width: 40px;height: 40px;text-align: center;border: 1px solid #fff;}
+#fqp-fav-container span:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+#fqp-fav-container strong {font-size: 20px;margin-right: 10px;}
+.roundedred {position: relative;display: block;margin: 0px auto;background:radial-gradient(circle at 50% 20%,#f97f92,#a3071e 75%,#333 100%);color: #fff;border-radius: 50%;padding:3px 7px 5px 7px !important;width: 32px;height: 32px;}
+.roundedred:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+.freqDrawStats {max-width: 1000px; margin: 0px auto;}
+
+
+
+[[/style]]
+
+
+[[div class="main-fqp-wrap"]]
+[[div class="original-pdraw"]]
+[[h2 class="original-pdraw"]]Powerball Frequencies Past 100 Drawings[[/h2]]
+[[div class="psearchbar-wrapper"]]
+
+  [[form name="pfqsearch" method="POST" action="/powerball-winning-numbers-analysis-tools#table13"]]
+  [[div class="lottery-fields-date"]]
+  [[label]]Drawings to analyse: [[/label]] 
+  [[select name="pnod" id="pnod"]]';
+    <?php
+    $pnodss = range(10,700,05);
+    foreach($pnodss as $pnods){
+        echo '[[option value="'.$pnods.'"]]'.$pnods.'[[/option]]';
+    }
+    ?>
+  [[/select]]
+  &nbsp;&nbsp;[[input name="pfq-search" type="submit" value="SEARCH" /]]
+  [[/div]]
+  [[/form]]
+[[/div]] <?php /** EO SEARCH BAR WRAP **/?>
+
+<?php /** ***************Begin new sortable Table********************* **/ ?>
+    [[table id="table12" class="sortable"]]
+    [[thead]]
+        [[tr]][[th]]Number[[/th]][[th]]Drawn Times[[/th]][[th]]Last Drawn[[/th]][[th]]Fav[[/th]][[/tr]]
+    [[/thead]]
+    [[tbody]]
+<?php /**  START THE TD LOOPS **/
+    $pnum_query = 1; /** Here we start with number 1 **/
+    $ptodaydate = date('Y-m-d');
+    
+    $db = JFactory::getDBO();
+    $platestdraw = "SELECT MAX(draw_date) FROM #__lotterydb_ar WHERE game_id = '101'";
+    
+    while($pnum_query<=26){ /** <------------------- CHANGE THE  AMOUNT HERE ***********  **/
+    	/** GET THE DRAWN TIMES WITHIN THE LAST 100 DRAWINGS **/
+        if($pnum_query < 10){
+            $pnum_query = str_pad($pnum_query, 2, "0", STR_PAD_LEFT);
+        }
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM (SELECT * FROM #__lotterydb_ar WHERE game_id = '101' ORDER BY `draw_date` DESC LIMIT 100) AS T WHERE (`sixth` = '$pnum_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $pcount_num = $db->loadResult();
+        
+        if($pcount_num > 1){
+            $pfcount = $pcount_num.' X';
+        }else if($pcount_num <= 1){
+            $pfcount = $pcount_num.' X';
+        }
+        
+        /** GET THE LAST DRAWN DATE **/
+        $db = JFactory::getDBO();
+        $sql = "SELECT MAX(`draw_date`) FROM (SELECT * FROM #__lotterydb_ar WHERE game_id = '101' ORDER BY `draw_date` DESC LIMIT 100) AS T WHERE (`sixth` = '$pnum_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $plastd = $db->loadResult();
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM #__lotterydb_ar WHERE (`draw_date` BETWEEN '$plastd' AND '$ptodaydate') AND game_id = '101'";
+        $db->setQuery($sql);
+        $db->execute();
+        $plastdraw = $db->loadResult();
+        
+        if($plastdraw == 1){
+            $plastdrawing = 'In last drw';
+        }else if($plastdraw > 1 && $plastdraw <= 100){
+            $plastdrawing = $plastdraw.' drws ago';
+        }else if($plastdraw < 1 || $plastdraw > 100){
+            $plastdrawing = 'Not in last 100 drws';
+        }
+       
+        
+        echo '[[tr]][[td class="roundedred"]]'.$pnum_query.'[[/td]][[td sorttable_customkey="'.$pcount_num.'"]]'.$pfcount.'[[/td]][[td sorttable_customkey="'.$plastdraw.'"]]'.$plastdrawing.'[[/td]][[td]][[input type="checkbox" id="input'.$pnum_query.'" name="pfavonum[]" value="'.$pnum_query.'"]][[/td]][[/tr]]';
+        $pnum_query++;
+    }
+?>
+    [[/tbody]]
+    [[/table]]
+[[/div]] <?php /** EO ORIGINAL PDRAW **/?>
+
+[[div class="predicted-pdraw"]]
+<?php if(isset($_POST['pfq-search'])){ /** USER SPECIFYING DATE RANGE **/
+    $pnod = $_POST['pnod'];
+    if(!empty($_POST['pfromdate'])){
+        $pfromdate = $_POST['pfromdate'];
+        $pfromdate = date('Y-m-d',strtotime($pfromdate));
+    }else{
+        $db = JFactory::getDBO();
+        $sql = "SELECT MIN(draw_date) FROM #__lotterydb_ar WHERE game_id = '101'";
+        $db->setQuery($sql);
+        $db->execute();
+        $pfromdate = $db->loadResult();
+        
+        $pfromdate = date('Y-m-d',strtotime($pfromdate));
+    }
+    if(!empty($_POST['ptodate'])){
+        $ptodate = $_POST['ptodate'];
+        $ptodate = date('Y-m-d',strtotime($ptodate));
+    }else{
+        $ptodate = date('Y-m-d');
+    }
+?>
+
+[[style type="text/css"]]
+.original-pdraw{display:none}
+#table12 thead,#table13 thead{background: #c10909;color: #fff;}
+#table11 td {text-align: center;}
+#table10 tbody tr,#table11 tbody tr {background: rgba(0,0,0,0);}
+#table10 tbody tr:hover,#table11 tbody tr:hover {background: #b0e8b7;}
+h2.predicted-draw{background: #ee3131;color: #fff;padding: 10px;}
+input[type="checkbox"] {transform: scale(1.7) !important;}
+#fqp-fav-container {display: block;padding: 10px;border: 3px solid #000;background:rgb(255, 210, 0);}
+#fqp-fav-container span {display: inline-block;margin: 0px 5px;font-size: 20px;font-weight: 700;position: relative;background: radial-gradient(circle at 50% 20%,#ffb1b1,#ee3030 75%,#333 100%);color: #fff;border-radius: 50%;padding: 7px 7px 7px 7px !important;width: 40px;height: 40px;text-align: center;border: 1px solid #fff;}
+#fqp-fav-container span:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+#fq-fav-container strong {font-size: 20px;margin-right: 10px;}
+.roundedred {position: relative;display: block;margin: 0px auto;background:radial-gradient(circle at 50% 20%,#ffb1b1,#ee3030 75%,#333 100%);color: #fff;border-radius: 50%;padding:3px 7px 5px 7px !important;width: 32px;height: 32px;}
+.roundedred:after{content: " ";display: block;position: absolute;width: 32px;height: 5px;bottom: -10%;left: 50%;transform: translate(-50%);border-radius: 50%;background: radial-gradient(ellipse at center,rgba(51,51,51,.75) 0,rgba(51,51,51,0) 75%);}
+[[/style]]
+
+[[h2 class="predicted-draw"]]Powerball Drawn Frequencies for the last <?php echo $pnod.' drws';?>[[/h2]]
+[[div class="searchbar-wrapper"]]
+
+  [[form name="pfqsearch" method="POST" action="/megamillions-winning-numbers-analysis-tools#table13"]]
+  [[div class="lottery-fields-date"]]
+  [[label]]Drawings to analyse: [[/label]] 
+  [[select name="pnod" id="pnod"]]';
+    <?php
+    $pnodss = range(0,700,05);
+    foreach($pnodss as $pnods){
+        echo '[[option value="'.$pnods.'"]]'.$pnods.'[[/option]]';
+    }
+    ?>
+  [[/select]]
+  &nbsp;&nbsp;[[input name="pfq-search" type="submit" value="SEARCH" /]]
+  [[/div]]
+  [[/form]]
+[[/div]] <?php /** EO SEARCH BAR WRAP **/?>
+
+<?php /** ***************Begin new predicted sortable Table********************* **/ ?>
+    [[table id="table13" class="sortable"]]
+    [[thead]]
+        [[tr]][[th]]Number[[/th]][[th]]Drawn Times[[/th]][[th]]Last Drawn[[/th]][[th]]Fav[[/th]][[/tr]]
+    [[/thead]]
+    [[tbody]]
+<?php 
+    $pnumber_query = 1; /** Here we start with number 1 **/
+    while($pnumber_query<=26){ /** <------------------- CHANGE THE megamillions AMOUNT HERE ***********  **/
+    	/** GET THE DRAWN TIMES **/
+        if($pnumber_query < 10){
+            $pnumber_query = str_pad($pnumber_query, 2, "0", STR_PAD_LEFT);
+        }
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM (SELECT * FROM #__lotterydb_ar WHERE game_id = '101' ORDER BY `draw_date` DESC LIMIT $pnod) AS T WHERE (`sixth` = '$pnumber_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $pcount_number = $db->loadResult();
+        
+        if($pcount_number > 1){
+            $pfpcount = $pcount_number.' X';
+        }else if($pcount_number <= 1){
+            $pfpcount = $pcount_number.' X';
+        }
+        
+        /** GET THE LAST DRAWN DATE **/
+        $db = JFactory::getDBO();
+        $sql = "SELECT MAX(`draw_date`) FROM (SELECT * FROM #__lotterydb_ar WHERE (`draw_date` BETWEEN '$pfromdate' AND '$ptodate') AND game_id = '101' ORDER BY `draw_date` DESC LIMIT $pnod) AS T WHERE (`sixth` = '$pnumber_query')";
+        $db->setQuery($sql);
+        $db->execute();
+        $plastpd = $db->loadResult();
+        
+        $db = JFactory::getDBO();
+        $sql = "SELECT COUNT(`id`) FROM #__lotterydb_ar WHERE (`draw_date` BETWEEN '$plastpd' AND '$ptodate') AND game_id = '101'";
+        $db->setQuery($sql);
+        $db->execute();
+        $plastpdraw = $db->loadResult();
+        
+        
+        if($plastpdraw == 1){
+            $plastdprawing = 'In last drawing';
+        }else if($plastpdraw > 1 && $plastpdraw <= $pnod){
+            $plastdprawing = $plastpdraw.' drws ago';
+        }else if($plastpdraw < 1 || $plastpdraw > $pnod){
+            $plastdprawing = 'Not in last '.$pnod.' drws';
+        }
+        
+        echo '[[tr]][[td class="roundedred"]]'.$pnumber_query.'[[/td]][[td sorttable_customkey="'.$pcount_number.'"]]'.$pfpcount.'[[/td]][[td sorttable_customkey="'.$plastpdraw.'"]]'.$plastdprawing.'[[/td]][[td]][[input type="checkbox" id="input'.$pnumber_query.'" name="pfavonum[]" value="'.$pnumber_query.'"]][[/td]][[/tr]]';
+        $pnumber_query++;
+    }
+?>
+    [[/tbody]]
+    [[/table]]
+<?php } /** EO PREDICTED IF ISSET time**/ ?>
+[[/div]] <?php /** EO PREDICTED DRAW **/?>
+[[div id="fqp-fav-container"]][[strong]]Favorites Selection: [[/strong]][[/div]]
+[[/div]] <?php /** EO MAIN PFQ WRAP **/?>
+
+[[script type="text/javascript"]]
+jQuery(document).ready(function() {
+jQuery('input[name="pfavonum[]"]').change(function () {
+  var pinputVal = jQuery(this).val() + ' ';
+  var pclassName = pinputVal.replace(/ /g, '_');
+
+  if (jQuery(this).prop('checked')) {  //which checkbox was checked
+    jQuery("#fqp-fav-container").append('[[span class="span_' + pclassName + '"]]' + pinputVal + '[[/span]]');
+  } else {
+    jQuery('.span_'+pclassName).remove();
+  }
+});
+ })
+[[/script]]
+{/source}
